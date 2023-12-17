@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.3.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Book</title>
+    <script type="text/javascript" src="https://unpkg.com/@zxing/library@0.18.6/umd/index.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+
+        .navbar {
+            overflow: hidden;
+            background-color: #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+        }
+
+        .navbar a {
+            color: white;
+            text-decoration: none;
+            padding: 10px 15px;
+        }
+
+        .navbar a:hover {
+            background-color: #ddd;
+            color: black;
+        }
+
+        .navbar-right {
+            display: flex;
+            align-items: center;
+        }
+
+        .navbar-right a:last-child {
+            margin-left: 20px;
+        }
+
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 300px;
+            margin: auto;
+            margin-top: 20px;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        input[type="text"] {
+            width: 80%;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            box-sizing: border-box;
+        }
+
+        input[type="submit"] {
+            width: 50%;
+            padding: 10px;
+            border: none;
+            background-color: #333;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+        }
+
+        input[type="submit"]:hover {
+            background-color: #555;
+        }
+
+        .scan-icon {
+            font-size: 24px;
+            color: grey;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .scan-icon {
+                color: black;
+            }
+        }
+
+        .tooltip {
+            visibility: hidden;
+            background-color: black;
+            color: white;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            left: 105%;
+            margin-left: 5px;
+            white-space: nowrap;
+            font-size: 12px;
+            line-height: 1.2;
+            max-width: 150px;
+        }
+
+        .scan-icon:hover .tooltip {
+            visibility: visible;
+        }
+
+        #barcode-scanner {
+            width: 80%;
+            height: 20%;
+            position: relative;
+            margin: auto;
+            border: 2px solid #333;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="navbar">
+        <a href="/add_book"><i class="fa fa-plus"></i> Add Book</a>
+        <a href="/view_books"><i class="fa fa-list"></i> View Catalogue</a>
+        <div class="navbar-right">
+            <a href="/logout"><i class="fa fa-sign-out"></i> Logout</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <h1>Add a New Book</h1>
+        {% with messages = get_flashed_messages(category_filter=["add_book_error", "add_book_success"]) %}
+        {% if messages %}
+        <div class="error">
+            {% for message in messages %}
+            {{ message }}
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+        <form method="post">
+            <input type="text" name="isbn" placeholder="Enter ISBN" required>
+            <input type="submit" value="Add Book">
+        </form>
+        <button id="scanButton" class="scan-icon" onclick="startScanning()">Scan Barcode
+        </button>
+        <video id="barcode-scanner"></video>
+    </div>
+
+    <script>
+        var codeReader = new ZXing.BrowserMultiFormatReader();
+        let lastCameraId = null;
+
+        function startScanning() {
+            if (!navigator.userAgent.match(/iPhone|Android/i)) {
+                alert("Barcode scanning is only available on mobile devices.");
+                return;
+            }
+
+            codeReader.listVideoInputDevices()
+                .then((videoInputDevices) => {
+                    lastCameraId = videoInputDevices[0].deviceId;
+                    startCamera(lastCameraId);
+                })
+                .catch((err) => {
+                    console.error(err);
+                    alert("Error during barcode scanning");
+                });
+
+            document.getElementById('barcode-scanner').style.display = 'block';
+        }
+
+        function startCamera(deviceId) {
+            const videoConstraints = {
+                deviceId: { exact: deviceId },
+                advanced: [{ facingMode: 'environment' }]
+            };
+
+            codeReader.decodeOnceFromConstraints({
+                video: videoConstraints
+            }, 'barcode-scanner')
+                .then((result) => {
+                    document.getElementById('barcode-scanner').style.display = 'none';
+                    document.querySelector('input[name="isbn"]').value = result.text;
+                    document.querySelector('form').submit();
+                })
+                .catch((err) => {
+                    console.error(err);
+                });
+        }
+
+        document.getElementById('barcode-scanner').addEventListener('click', function () {
+            if (lastCameraId) {
+                codeReader.reset();
+                startCamera(lastCameraId);
+            }
+        });
+    </script>
+</body>
+
+</html>

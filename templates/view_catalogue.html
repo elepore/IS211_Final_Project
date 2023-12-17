@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.3.0/css/all.min.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Catalogue</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        .navbar {
+            overflow: hidden;
+            background-color: #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+        }
+        
+        .navbar a {
+            color: white;
+            text-decoration: none;
+            padding: 10px 15px;
+        }
+        
+        .navbar a:hover {
+            background-color: #ddd;
+            color: black;
+        }
+
+        .navbar-right {
+            display: flex;
+            align-items: center;
+        }
+
+        .navbar-right a:last-child {
+            margin-left: 20px;
+        }
+        .container {
+            padding: 20px;
+            max-width: 1200px;
+            margin: auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); 
+            grid-gap: 20px;
+        }
+        .header {
+            display: relative;
+        }
+        h1 {
+            color: #333;
+        }
+        .book-card {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 10px;
+            text-align: center;
+            position: relative;
+        }
+        .book-card img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 5px;
+        }
+        .book-info {
+            margin-top: 10px;
+        }
+        .delete-button {
+            cursor: pointer;
+            background-color: red;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            padding: 5px 8px;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+        .delete-button:hover {
+            background-color: darkred;
+        }
+        .select-delete-all {
+            margin-bottom: 0.67em;
+            text-align: center;
+        }
+        .select-delete-all button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 24px;
+        }
+        .popup {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 1px solid #ddd;
+            padding: 20px;
+            background-color: white;
+            box-shadow: 0px 0px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+        .popup button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .popup .delete-confirm {
+            background-color: red;
+            color: white;
+        }
+        .popup .cancel {
+            background-color: gray;
+            color: white;
+        }
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 500;
+        }
+        .book-card input[type="checkbox"] {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+        }
+        #searchInput {
+            width: 90%;
+            padding: 10px;
+            margin-bottom: 0.67em;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="navbar">
+        <a href="/add_book"><i class="fa fa-plus"></i> Add Book</a>
+        <a href="/view_books"><i class="fa fa-list"></i> View Catalogue</a>
+        <div class="navbar-right">
+            <a href="/logout"><i class="fa fa-sign-out"></i> Logout</a>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1>{{ username }}'s Book Catalog</h1>
+            <div class="select-delete-all">
+                <input type="text" id="searchInput" placeholder="Search books by title..." onkeyup="filterBooks()">
+                <button onclick="deleteSelectedBooks()">🗑️ Delete Selected</button>
+            </div>
+        </div>
+    
+        {% for book in books %}
+        <div class="book-card" id="book-{{ book[0] }}">
+            <input type="checkbox" class="delete-checkbox" value="{{ book[0] }}">
+            <img src="{{ book[8] }}" alt="Book Thumbnail">
+            <div class="book-info">
+                <h3>{{ book[4] }}</h3>
+                <p>Author: {{ book[5] }}</p>
+                <p>Pages: {{ book[6] }}</p>
+                <p>Rating: {{ book[7] }}/5</p>
+            </div>
+            <form method="post" action="/delete_book/{{ book[0] }}" id="deleteForm-{{ book[0] }}">
+                <button type="button" onclick="confirmDelete('{{ book[0] }}')" class="delete-button">X</button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+    <!-- Confirmation Popup -->
+    <div id="confirmPopup" class="popup">
+        <p>Are you sure you want to delete this book?</p>
+        <button onclick="deleteBook()" class="delete-confirm">Yes, Delete</button>
+        <button onclick="closePopup()" class="cancel">Cancel</button>
+    </div>
+    <div id="confirmDeleteSelectedPopup" class="popup">
+        <p>Are you sure you want to delete the selected books?</p>
+        <button onclick="deleteSelectedBooksConfirmed()" class="delete-confirm">Yes, Delete</button>
+        <button onclick="closeDeleteSelectedPopup()" class="cancel">Cancel</button>
+    </div>
+    <div class="overlay" id="overlay"></div>
+
+    <script>
+        var books = [
+            {% for book in books %}
+            {
+                id: "{{ book[0] }}",
+                title: "{{ book[4] }}",
+                author: "{{ book[5] }}",
+                pages: {{ book[6] }},
+                rating: {{ book[7] }},
+            },
+            {% endfor %}
+        ];
+
+        function confirmDelete(bookId) {
+            document.getElementById('confirmPopup').style.display = 'block';
+            document.getElementById('overlay').style.display = 'block';
+            window.currentBookId = bookId;
+        }
+    
+        function deleteBook() {
+            document.getElementById('deleteForm-' + window.currentBookId).submit();
+        }
+    
+        function closePopup() {
+            document.getElementById('confirmPopup').style.display = 'none';
+            document.getElementById('overlay').style.display = 'none';
+        }
+    
+        function confirmDeleteSelected() {
+            document.getElementById('confirmDeleteSelectedPopup').style.display = 'block';
+            document.getElementById('overlay').style.display = 'block';
+        }
+    
+        function deleteSelectedBooksConfirmed() {
+            var selectedBooks = document.querySelectorAll('.delete-checkbox:checked');
+            var bookIds = Array.from(selectedBooks).map(cb => cb.value);
+            if (bookIds.length > 0) {
+                fetch('/delete_selected_books', {
+                    method: 'POST',
+                    body: JSON.stringify({ 'book_ids': bookIds }),
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                }).then(response => response.json())
+                  .then(data => {
+                      if (data.success) {
+                          window.location.reload();
+                      } else {
+                          alert('Error deleting books');
+                      }
+                  });
+                closeDeleteSelectedPopup();
+            } else {
+                alert('No books selected');
+            }
+        }
+    
+        function closeDeleteSelectedPopup() {
+            document.getElementById('confirmDeleteSelectedPopup').style.display = 'none';
+            document.getElementById('overlay').style.display = 'none';
+        }
+    
+        function deleteSelectedBooks() {
+            var selectedBooks = document.querySelectorAll('.delete-checkbox:checked');
+            var bookIds = Array.from(selectedBooks).map(cb => cb.value);
+            if (bookIds.length > 0) {
+                confirmDeleteSelected();
+            } else {
+                alert('No books selected');
+            }
+        }
+
+        function filterBooks() {
+            var searchInput = document.getElementById('searchInput').value.toLowerCase();
+            for (var i = 0; i < books.length; i++) {
+                var book = books[i];
+                var bookCard = document.getElementById('book-' + book.id);
+                if (book.title.toLowerCase().includes(searchInput)) {
+                    bookCard.style.display = 'block';
+                } else {
+                    bookCard.style.display = 'none';
+                }
+            }
+        }
+    </script>
+</body>
+</html>

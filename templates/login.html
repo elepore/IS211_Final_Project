@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Book Catalogue</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .login-container {
+            background-color: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 300px;
+            text-align: center;
+        }
+
+        h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            box-sizing: border-box;
+        }
+
+        .form-button {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            background-color: #333;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .form-button:hover {
+            background-color: #555;
+        }
+
+        .error {
+            color: red;
+            margin-bottom: 15px;
+        }
+
+        .speed-dial {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .speed-dial button {
+            margin-bottom: 10px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 24px;
+        }
+
+        .speed-dial button:hover .tooltip {
+            visibility: visible;
+        }
+
+        .tooltip {
+            visibility: hidden;
+            background-color: black;
+            color: white;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px;
+            position: absolute;
+            z-index: 1;
+            left: 105%;
+            margin-left: 5px;
+            white-space: nowrap;
+            font-size: 12px;
+            line-height: 1.2;
+            max-width: 150px;
+        }
+
+        .popup {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            border: 1px solid #ddd;
+            padding: 20px;
+            background-color: white;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .popup h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .popup form {
+            text-align: center;
+        }
+
+        .popup input[type="text"],
+        .popup input[type="password"],
+        .popup select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            box-sizing: border-box;
+        }
+
+        .popup button[type="submit"] {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            background-color: #333;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .popup button[type="submit"]:hover {
+            background-color: #555;
+        }
+
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 500;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="speed-dial">
+        <button id="createUserButton">
+            &#x2795;
+            <span class="tooltip">Create New User</span>
+        </button>
+        <button id="simulateUserButton">
+            &#x1F464;
+            <span class="tooltip">Simulate User</span>
+        </button>
+    </div>
+
+    <div class="login-container">
+        <h2>Login</h2>
+        {% with messages = get_flashed_messages(category_filter=["login_error"]) %}
+        {% if messages %}
+        <div class="error">
+            {% for message in messages %}
+            {{ message }}
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+        <form method="post" action="/login"> 
+            <input type="text" name="username" placeholder="Username" class="form-input" required><br>
+            <input type="password" name="password" placeholder="Password" class="form-input" required><br>
+            <input type="submit" value="Login" class="form-button">
+        </form>
+    </div>
+    <div class="overlay" id="overlay"></div>
+    <div class="popup" id="createUserPopup">
+        <form method="post" action="/register">
+            <h2>Register New User</h2>
+            <input type="text" name="new_username" placeholder="New Username" required><br>
+            <input type="password" name="new_password" placeholder="New Password" required><br>
+            <button type="submit" class="form-button">Register</button>
+        </form>
+    </div>
+    <div class="popup" id="simulateUserPopup">
+        <form method="post" action="/impersonate">
+            <h2>Impersonate User</h2>
+            <select name="user_id" class="form-input">
+                {% for user in users %}
+                <option value="{{ user[0] }}">{{ user[1] }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="form-button">Impersonate</button>
+        </form>
+    </div>
+
+    <script>
+        document.getElementById("createUserButton").onclick = function () {
+            document.getElementById("createUserPopup").style.display = 'block';
+            document.getElementById("overlay").style.display = 'block';
+        };
+        document.getElementById("simulateUserButton").onclick = function () {
+            document.getElementById("simulateUserPopup").style.display = 'block';
+            document.getElementById("overlay").style.display = 'block';
+        };
+        document.getElementById("overlay").onclick = function () {
+            document.getElementById("createUserPopup").style.display = 'none';
+            document.getElementById("simulateUserPopup").style.display = 'none';
+            this.style.display = 'none';
+        };
+    </script>
+</body>
+
+</html>
